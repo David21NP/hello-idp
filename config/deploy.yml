@@ -1,0 +1,42 @@
+# hello-idp — Phase 1 baseline (conventions: ops/README.md)
+service: hello-idp
+image: david21np/hello-idp               # ghcr.io comes from registry.server
+
+# The one node (CPX12).
+servers:
+  - 62.238.103.211
+
+# kamal-proxy: vhost routing + built-in Let's Encrypt (HTTP-01).
+proxy:
+  host: hello-idp.idp.david-projects.com   # *.idp wildcard, DNS-only A → 62.238.103.211
+  ssl: true
+  healthcheck:
+    path: /up                              # Rails 8 default health endpoint
+
+ssh:
+  user: deploy
+  port: 2222
+
+registry:
+  server: ghcr.io
+  username: David21NP
+  password:
+    - KAMAL_REGISTRY_PASSWORD              # from env / .kamal/secrets (gitignored)
+
+env:
+  clear:
+    WEB_CONCURRENCY: 1                     # 1 vCPU node — single Puma worker
+    RAILS_LOG_LEVEL: info
+  secret:
+    - RAILS_MASTER_KEY                     # from .kamal/secrets ← config/master.key
+
+# Durable solid_cache sqlite lives here; survives deploys.
+volumes:
+  - "hello-idp_storage:/rails/storage"
+
+asset_path: /rails/public/assets
+
+builder:
+  arch: amd64                              # node is amd64 — keep images amd64
+
+retain_containers: 3                       # rollback window, tiny disk is fine
